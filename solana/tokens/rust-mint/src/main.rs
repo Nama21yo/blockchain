@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let payer = load_secret_key_from_env();
     println!("Wallet connected: {}", payer.pubkey());
 
-    let rpc_url = "https://api.devnet.solana.com";
+    let rpc_url = "https://solana-devnet.g.alchemy.com/v2/ENn3gUvc1DsUeisTxP1FD";
     let client = RpcClient::new_with_commitment(rpc_url, CommitmentConfig::confirmed());
 
     // 1. Define the Token Identity (Native Metadata)

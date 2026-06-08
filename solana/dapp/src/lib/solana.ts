@@ -1,8 +1,47 @@
-import { Connection, PublicKey, type TransactionSignature } from '@solana/web3.js';
+import { env } from '$env/dynamic/public';
+import { Connection, PublicKey, clusterApiUrl, type TransactionSignature } from '@solana/web3.js';
 
 export const DEVNET_CLUSTER = 'devnet';
 
-export const connection = new Connection('https://solana-devnet.g.alchemy.com/v2/ENn3gUvc1DsUeisTxP1FD', 'confirmed');
+const publicDevnetRpc = clusterApiUrl(DEVNET_CLUSTER);
+const configuredRpcUrl = env.PUBLIC_SOLANA_RPC_URL || publicDevnetRpc;
+
+export const connection = new Connection(configuredRpcUrl, 'confirmed');
+
+export async function requestAirdrop(recipient: PublicKey, lamports: number) {
+	const response = await fetch(configuredRpcUrl, {
+		method: 'POST',
+		headers: {
+			accept: 'application/json',
+			'content-type': 'application/json'
+		},
+		body: JSON.stringify({
+			jsonrpc: '2.0',
+			id: crypto.randomUUID(),
+			method: 'requestAirdrop',
+			params: [recipient.toBase58(), lamports, { commitment: 'processed' }]
+		})
+	});
+
+	if (!response.ok) {
+		throw new Error(`Airdrop RPC request failed with HTTP ${response.status}.`);
+	}
+
+	const payload: {
+		result?: TransactionSignature;
+		error?: { code: number; message: string };
+	} = await response.json();
+
+	if (payload.error) {
+		throw new Error(`Airdrop RPC error ${payload.error.code}: ${payload.error.message}`);
+	}
+
+	if (!payload.result) {
+		throw new Error('Airdrop RPC returned no transaction signature.');
+	}
+
+	return payload.result;
+}
 
 export function explorerTxUrl(signature: TransactionSignature) {
 	return `https://explorer.solana.com/tx/${signature}?cluster=${DEVNET_CLUSTER}`;

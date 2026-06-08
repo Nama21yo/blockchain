@@ -22,6 +22,11 @@ pnpm run dev -- --open
 The connected wallet must be set to Solana Devnet. Public Devnet RPC endpoints
 can rate-limit airdrop requests.
 
+To use Alchemy for all RPC requests, create `.env` from `.env.example` and set
+`PUBLIC_SOLANA_RPC_URL` to the Alchemy Devnet endpoint. The dashboard sends
+Alchemy's documented three-parameter `requestAirdrop` payload, including the
+`processed` commitment configuration.
+
 ## Verify
 
 ```bash

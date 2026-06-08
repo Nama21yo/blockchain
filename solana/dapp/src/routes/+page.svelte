@@ -6,7 +6,7 @@
 	import SendSol from '$lib/components/SendSol.svelte';
 	import SolanaPay from '$lib/components/SolanaPay.svelte';
 	import TokenManager from '$lib/components/TokenManager.svelte';
-	import { connection, getErrorMessage } from '$lib/solana';
+	import { connection, getErrorMessage, requestAirdrop as requestRpcAirdrop } from '$lib/solana';
 
 	let isLoading = $state(false);
 	let isBalanceLoading = $state(false);
@@ -68,7 +68,7 @@
 		networkError = null;
 
 		try {
-			const signature = await connection.requestAirdrop(recipient, LAMPORTS_PER_SOL);
+			const signature = await requestRpcAirdrop(recipient, LAMPORTS_PER_SOL);
 			const latestBlockhash = await connection.getLatestBlockhash('confirmed');
 			const confirmation = await connection.confirmTransaction(
 				{
@@ -86,10 +86,14 @@
 			txSignature = signature;
 			await refreshBalance(recipient);
 		} catch (error) {
-			networkError = getErrorMessage(
-				error,
-				'Airdrop failed. The public Devnet faucet may be rate-limiting requests.'
-			);
+			const message = getErrorMessage(error, '');
+			const normalizedMessage = message.toLowerCase();
+			networkError =
+				message.includes('429') || normalizedMessage.includes('rate')
+					? 'The configured Devnet RPC is rate-limiting this request. Wait and try again, or use faucet.solana.com.'
+					: message.includes('-32603') || normalizedMessage.includes('internal error')
+						? 'The configured Devnet RPC failed internally while processing the airdrop. Use faucet.solana.com if this RPC does not provide faucet access.'
+						: message || 'Airdrop failed. This RPC provider may not support requestAirdrop.';
 		} finally {
 			isLoading = false;
 		}

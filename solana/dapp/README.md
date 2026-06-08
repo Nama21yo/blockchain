@@ -1,7 +1,16 @@
-# Solana Devnet Faucet
+# Solana Devnet Dashboard
 
-A Svelte 5 dApp for connecting a Phantom or Solflare wallet, viewing its Devnet
-balance, and requesting 1 test SOL.
+A Svelte 5 dApp for connecting a Phantom or Solflare wallet and working with
+Solana Devnet.
+
+Features:
+
+- View the connected wallet balance and request test SOL
+- Sign and locally verify messages
+- Send native SOL
+- Discover and transfer legacy SPL Token and Token-2022 assets
+- Read Token-2022 and legacy Metaplex metadata when available
+- Generate Solana Pay transfer URLs and QR codes
 
 ## Run Locally
 

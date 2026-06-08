@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { walletStore } from '@svelte-on-solana/wallet-adapter-core';
-	import { Connection, LAMPORTS_PER_SOL, PublicKey, clusterApiUrl } from '@solana/web3.js';
+	import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 	import { WalletMultiButton } from '@svelte-on-solana/wallet-adapter-ui';
-
-	const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+	import MessageSigner from '$lib/components/MessageSigner.svelte';
+	import SendSol from '$lib/components/SendSol.svelte';
+	import SolanaPay from '$lib/components/SolanaPay.svelte';
+	import TokenManager from '$lib/components/TokenManager.svelte';
+	import { connection, getErrorMessage } from '$lib/solana';
 
 	let isLoading = $state(false);
 	let isBalanceLoading = $state(false);
@@ -92,9 +95,6 @@
 		}
 	}
 
-	function getErrorMessage(error: unknown, fallback: string) {
-		return error instanceof Error && error.message ? error.message : fallback;
-	}
 </script>
 
 <main class="mx-auto w-full max-w-6xl px-5 pt-12 pb-16 sm:px-8 sm:pt-20">
@@ -106,14 +106,14 @@
 			Build and test on Solana
 		</div>
 		<h1 class="text-4xl font-semibold tracking-[-0.04em] text-white sm:text-6xl">
-			Fund your next
+			Control your
 			<span class="bg-gradient-to-r from-violet-400 to-emerald-300 bg-clip-text text-transparent">
-				Devnet idea.
+				Devnet wallet.
 			</span>
 		</h1>
 		<p class="mx-auto mt-6 max-w-xl text-base leading-7 text-slate-400 sm:text-lg">
-			Connect a Solana wallet and request 1 test SOL for development, demos, and
-			experimentation.
+			Request test SOL, prove ownership, transfer assets, and generate Solana Pay requests
+			from one development dashboard.
 		</p>
 	</section>
 
@@ -238,11 +238,31 @@
 		</div>
 	</section>
 
+	{#if connected}
+		<section class="mx-auto mt-10 max-w-5xl">
+			<div class="mb-5 flex items-end justify-between gap-4">
+				<div>
+					<p class="text-xs font-semibold tracking-[0.2em] text-emerald-300/70 uppercase">
+						Connected tools
+					</p>
+					<h2 class="mt-2 text-2xl font-semibold tracking-tight text-white">DeFi dashboard</h2>
+				</div>
+				<p class="hidden text-xs text-slate-600 sm:block">All transactions target Devnet</p>
+			</div>
+			<div class="grid gap-4 lg:grid-cols-2">
+				<MessageSigner />
+				<SendSol />
+				<TokenManager />
+				<SolanaPay />
+			</div>
+		</section>
+	{/if}
+
 	<section class="mx-auto mt-10 grid max-w-2xl gap-3 sm:grid-cols-3">
 		{#each [
-			['01', 'Connect', 'Choose a supported wallet.'],
-			['02', 'Request', 'Ask Devnet for 1 test SOL.'],
-			['03', 'Build', 'Use it in your next project.']
+			['01', 'Connect', 'Choose Phantom or Solflare.'],
+			['02', 'Transact', 'Move SOL and SPL assets.'],
+			['03', 'Integrate', 'Test auth and Solana Pay.']
 		] as step}
 			<div class="rounded-xl border border-white/[0.06] bg-white/[0.025] p-4">
 				<p class="font-mono text-[0.65rem] text-violet-400">{step[0]}</p>

@@ -38,8 +38,11 @@
 </script>
 
 <svelte:head>
-	<title>Solana Devnet Faucet</title>
-	<meta name="description" content="Connect a Solana wallet and request test SOL on Devnet." />
+	<title>Solana Devnet Dashboard</title>
+	<meta
+		name="description"
+		content="Manage Devnet SOL and SPL tokens, sign messages, and generate Solana Pay requests."
+	/>
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
@@ -65,7 +68,7 @@
 					<path d="M5 17h12.5l2.5 2.5H7.5L5 17Z" fill="#14F195" />
 				</svg>
 			</span>
-			<span>DEVNET FAUCET</span>
+			<span>DEVNET LAB</span>
 		</a>
 		<div
 			class="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/[0.07] px-3 py-1.5 text-xs font-medium text-emerald-300"

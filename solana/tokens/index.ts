@@ -2,15 +2,23 @@ import {
   Connection,
   Keypair,
   PublicKey,
-  LAMPORTS_PER_SOL,
   clusterApiUrl,
+  SystemProgram,
+  Transaction,
+  sendAndConfirmTransaction,
 } from '@solana/web3.js';
 import {
-  createMint,
+  TOKEN_2022_PROGRAM_ID,
+  ExtensionType,
+  createInitializeMintInstruction,
+  createInitializeMetadataPointerInstruction,
+  getMintLen,
+  TYPE_SIZE,
+  LENGTH_SIZE,
   getOrCreateAssociatedTokenAccount,
   mintTo,
-  TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
+import { createInitializeInstruction, pack } from '@solana/spl-token-metadata';
 
 const DECIMALS = 6;
 const MINT_AMOUNT = 100;
@@ -45,77 +53,121 @@ function loadSecretKeyFromEnv(): Uint8Array {
 
 const secretKey = loadSecretKeyFromEnv();
 const payer = Keypair.fromSecretKey(secretKey);
-const mintAuthority = payer;
-
-async function requestAirdrop(publicKey: PublicKey, amount: number): Promise<void> {
-  console.log(`Requesting airdrop of ${amount / LAMPORTS_PER_SOL} SOL...`);
-  const airdropSignature = await connection.requestAirdrop(publicKey, amount);
-
-  const latestBlockhash = await connection.getLatestBlockhash();
-  await connection.confirmTransaction({
-    blockhash: latestBlockhash.blockhash,
-    lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-    signature: airdropSignature,
-  });
-  console.log('Airdrop confirmed.');
-}
-
-async function createTokenMint(
-  payerKeypair: Keypair,
-  mintAuthorityPubkey: PublicKey,
-  decimals: number,
-): Promise<PublicKey> {
-  console.log('Creating token mint...');
-  const mint = await createMint(
-    connection,
-    payerKeypair,
-    mintAuthorityPubkey,
-    null,
-    decimals,
-    Keypair.generate(),
-    undefined,
-    TOKEN_PROGRAM_ID,
-  );
-  console.log(`Mint created at: ${mint.toBase58()}`);
-  return mint;
-}
-
-async function mintNewTokens(mint: PublicKey, to: PublicKey, amount: number): Promise<void> {
-  if (!Number.isInteger(amount) || amount <= 0) {
-    throw new Error('Mint amount must be a positive integer.');
-  }
-
-  console.log(`Creating associated token account for ${to.toBase58()}...`);
-  const tokenAccount = await getOrCreateAssociatedTokenAccount(
-    connection,
-    payer,
-    mint,
-    to,
-  );
-  console.log(`Token account ready at: ${tokenAccount.address.toBase58()}`);
-
-  const rawAmount = BigInt(amount) * 10n ** BigInt(DECIMALS);
-  console.log(`Minting ${amount} tokens...`);
-
-  await mintTo(connection, payer, mint, tokenAccount.address, payer, rawAmount);
-
-  console.log(`Minted ${amount} tokens to ${tokenAccount.address.toBase58()}`);
-}
 
 async function main(): Promise<void> {
-  console.log(`Wallet Address: ${payer.publicKey.toBase58()}`);
+  console.log(`Wallet connected: ${payer.publicKey.toBase58()}`);
 
-  await requestAirdrop(payer.publicKey, LAMPORTS_PER_SOL * 2);
-  const mintPublicKey = await createTokenMint(payer, mintAuthority.publicKey, DECIMALS);
-  await mintNewTokens(mintPublicKey, mintAuthority.publicKey, MINT_AMOUNT);
+  // 1. Define the Token Identity (Native Metadata)
+  const mintKeypair = Keypair.generate();
+  const metadata = {
+    mint: mintKeypair.publicKey,
+    name: 'My Modern Token',
+    symbol: 'MOD',
+    uri: 'https://raw.githubusercontent.com/solana-developers/program-examples/new-examples/tokens/tokens-and-minting/token-2022/frontend/public/metadata.json',
+    additionalMetadata: [], // You can add custom key-value pairs here!
+  };
 
-  console.log(`View your token on Explorer:`);
-  console.log(
-    `https://explorer.solana.com/address/${mintPublicKey.toBase58()}?cluster=devnet`,
+  console.log(`\nPreparing to launch: ${metadata.name} (${metadata.symbol})`);
+
+  // 2. SVM Memory & Rent Calculation
+  // We must calculate the EXACT byte size to satisfy SVM modification rules
+  const mintLen = getMintLen([ExtensionType.MetadataPointer]);
+  const metadataLen = TYPE_SIZE + LENGTH_SIZE + pack(metadata).length;
+  const totalBytes = mintLen + metadataLen;
+
+  // Calculate the rent required to satisfy the "RentExempt" rule
+  const lamports = await connection.getMinimumBalanceForRentExemption(totalBytes);
+
+  // 3. Construct the Atomic Transaction
+  const transaction = new Transaction().add(
+    // Step A: The System Program creates the file and assigns ownership
+    SystemProgram.createAccount({
+      fromPubkey: payer.publicKey,
+      newAccountPubkey: mintKeypair.publicKey,
+      space: mintLen, // Allocate base space
+      lamports: lamports, // Deposit rent
+      programId: TOKEN_2022_PROGRAM_ID, // Transfer ownership to Token-2022
+    }),
+    // Step B: Tell the mint where to look for Metadata (Pointing at itself)
+    createInitializeMetadataPointerInstruction(
+      mintKeypair.publicKey,
+      payer.publicKey, // Update Authority
+      mintKeypair.publicKey, // Metadata Address
+      TOKEN_2022_PROGRAM_ID,
+    ),
+    // Step C: Initialize the basic supply/decimal rules
+    createInitializeMintInstruction(
+      mintKeypair.publicKey,
+      DECIMALS,
+      payer.publicKey, // Mint Authority
+      null, // Freeze Authority
+      TOKEN_2022_PROGRAM_ID,
+    ),
+    // Step D: Write the actual Name, Symbol, and URI into the TLV bytes
+    createInitializeInstruction({
+      programId: TOKEN_2022_PROGRAM_ID,
+      mint: mintKeypair.publicKey,
+      metadata: mintKeypair.publicKey,
+      name: metadata.name,
+      symbol: metadata.symbol,
+      uri: metadata.uri,
+      mintAuthority: payer.publicKey,
+      updateAuthority: payer.publicKey,
+    }),
   );
+
+  // 4. Send the Transaction
+  // We use Gulf Stream to send it to the leader with a recentBlockhash
+  const { blockhash } = await connection.getLatestBlockhash();
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = payer.publicKey;
+
+  console.log('\nSending transaction to create the Mint...');
+  const txSignature = await sendAndConfirmTransaction(
+    connection,
+    transaction,
+    [payer, mintKeypair], // Both must sign!
+    { commitment: 'confirmed' },
+  );
+  console.log(`✅ Mint created! Signature: ${txSignature}`);
+  console.log(
+    `Explorer: https://explorer.solana.com/address/${mintKeypair.publicKey.toBase58()}?cluster=devnet`,
+  );
+
+  // 5. Create the Associated Token Account (PDA)
+  console.log('\nCalculating PDA for the Associated Token Account...');
+  const ata = await getOrCreateAssociatedTokenAccount(
+    connection,
+    payer,
+    mintKeypair.publicKey,
+    payer.publicKey,
+    false,
+    'confirmed',
+    { commitment: 'confirmed' },
+    TOKEN_2022_PROGRAM_ID, // MUST specify the 2022 program!
+  );
+  console.log(`✅ ATA ready at: ${ata.address.toBase58()}`);
+
+  // 6. Print the Money
+  console.log(`\nMinting ${MINT_AMOUNT} ${metadata.symbol}...`);
+  const rawAmount = BigInt(MINT_AMOUNT) * 10n ** BigInt(DECIMALS);
+
+  await mintTo(
+    connection,
+    payer,
+    mintKeypair.publicKey,
+    ata.address,
+    payer,
+    rawAmount,
+    [],
+    { commitment: 'confirmed' },
+    TOKEN_2022_PROGRAM_ID, // MUST specify the 2022 program!
+  );
+
+  console.log(`✅ Success! You now own ${MINT_AMOUNT} ${metadata.symbol}.`);
 }
 
 main().catch((error) => {
-  console.error('Error executing script:', error);
+  console.error('❌ Error executing script:', error);
   process.exitCode = 1;
 });

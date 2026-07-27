@@ -1,0 +1,68 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/manrope';
+@import '@fontsource-variable/space-grotesk';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+@theme {
+	--color-cloud: #f4f7fb;
+	--color-ink: #11233c;
+	--color-telegram: #229ed9;
+	--color-bonk: #ff6b4a;
+	--color-coin: #ffd166;
+	--color-ledger: #d7e2ee;
+	--font-display: 'Space Grotesk Variable', sans-serif;
+	--font-sans: 'Manrope Variable', sans-serif;
+	--font-mono: 'IBM Plex Mono', monospace;
+}
+
+:root {
+	font-family: var(--font-sans);
+	color: var(--color-ink);
+	background: var(--color-cloud);
+	font-synthesis: none;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html {
+	min-width: 320px;
+	background: var(--color-cloud);
+}
+
+body {
+	margin: 0;
+	min-width: 320px;
+	min-height: 100vh;
+}
+
+button,
+input,
+select {
+	font: inherit;
+}
+
+button,
+a,
+input,
+select {
+	outline-color: var(--color-telegram);
+	outline-offset: 3px;
+}
+
+::selection {
+	background: color-mix(in srgb, var(--color-coin) 72%, white);
+	color: var(--color-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		scroll-behavior: auto !important;
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}

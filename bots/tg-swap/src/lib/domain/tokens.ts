@@ -19,7 +19,7 @@ export const TOKENS: Record<TokenSymbol, SwapToken> = {
 	BONK: {
 		symbol: 'BONK',
 		name: 'Bonk',
-		mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6fTtfH1qQQNZv3H',
+		mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
 		decimals: 5,
 		color: '#ff6b4a'
 	},

@@ -29,6 +29,10 @@
 		"@fontsource-variable/manrope": "^5.2.8",
 		"@fontsource-variable/space-grotesk": "^5.2.8",
 		"@fontsource/ibm-plex-mono": "^5.2.8",
+		"@solana/wallet-adapter-base": "^0.9.27",
+		"@solana/wallet-adapter-phantom": "^0.9.29",
+		"@solana/wallet-adapter-solflare": "^0.6.33",
+		"@solana/web3.js": "^1.98.4",
 		"lucide-svelte": "^1.0.1"
 	}
 }

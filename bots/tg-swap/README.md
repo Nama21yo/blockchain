@@ -2,6 +2,12 @@
 
 Fetch is a Telegram-inspired, non-custodial Solana swap app. It swaps curated pairs of SOL, BONK, and USDC through Jupiter Swap V2 while keeping the interface code separate from token math, wallet signing, and server-side API access.
 
+## App preview
+
+![Fetch displaying a live Jupiter SOL-to-BONK quote](docs/assets/fetch-live-quote.png)
+
+The screenshot shows a live mainnet quote returned by Jupiter. The wallet is disconnected, so it does not represent a signed or executed transaction.
+
 ## What is implemented
 
 - Svelte 5, SvelteKit, TypeScript, Tailwind CSS 4, and Bun
